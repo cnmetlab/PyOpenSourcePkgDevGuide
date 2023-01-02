@@ -167,3 +167,156 @@
 
 构建你自己的命令行
 ----------------------
+有时候对于一些功能非常明确且较为闭合的功能，我们可以把它写成一个命令行工具，这样就不需要每次都通过代码来调用了。对于这种需求， 我们也可以在 ``setup.py`` 中进行指定。
+
+我们以 `mplfonts <https://github.com/Clarmy/mplfonts>`_ 项目为例，它的 ``setup.py`` 是这样写的：
+
+.. code:: python
+
+    import setuptools
+    import os
+
+    FILE_PATH = os.path.dirname(os.path.realpath(__file__))
+
+    with open(os.path.join(FILE_PATH, 'README.md'), 'r', encoding='utf-8') as fh:
+        long_description = fh.read()
+
+    requirements_path = os.path.join(FILE_PATH, 'requirements.txt')
+    with open(requirements_path, encoding='utf-8') as f:
+        required = f.read().splitlines()
+
+    setuptools.setup(
+        name='mplfonts',
+        version='0.0.7',
+        author='Wentao Li',
+        author_email='clarmylee92510@gmail.com',
+        description='Fonts manager for matplotlib',
+        long_description=long_description,
+        long_description_content_type='text/markdown',
+        url='https://github.com/Clarmy/mplfonts',
+        include_package_data=True,
+        package_data={'': ['rc/matplotlibrc', 'fonts/*']},
+        packages=setuptools.find_packages(),
+        install_requires=required,
+        classifiers=[
+            'Programming Language :: Python :: 3',
+        ],
+        python_requires='>=3.6',
+        entry_points={
+            'console_scripts': [
+                'mplfonts = mplfonts.bin.cli:cli'
+            ]
+        }
+    )
+
+在这个安装文件里，对命令行工具的定义是这里：
+
+
+.. code:: python
+
+    # ...
+    setuptools.setup(
+        # ...
+        entry_points={
+            'console_scripts': [
+                'mplfonts = mplfonts.bin.cli:cli'
+            ]
+        }
+    )
+
+
+它的意思是，定义 ``mplfonts`` 作为一个命令，它的执行路径是 ``mplfonts.bin.cli:cli`` 。这个路径其实是指的 ``mplfonts/bin/cli.py`` 文件里的 ``cli`` 函数。
+
+我们再来看这个函数是怎么定义的：
+
+.. code:: python
+
+    import os
+
+    import fire
+    from mplfonts.util.manage import (
+        install_fonts, install_font, update_custom_rc, list_font)
+    from mplfonts.conf import FONT_DIR
+
+
+    def init():
+        """To set default cjk fonts and put into use"""
+        install_fonts()
+        update_custom_rc()
+
+
+    def install(path=None, update=True):
+        """
+        To install font
+
+        Args:
+            path (str): The font file path or directory path
+        """
+        if not path:
+            path = FONT_DIR
+        if os.path.isdir(path):
+            install_fonts(path)
+        elif os.path.isfile(path):
+            install_font(path)
+
+        if update:
+            updaterc()
+
+
+    def updaterc(rcfp=None):
+        """
+        To update matplotlibrc by custom file
+
+        Args:
+            rcfp (str): The custom matplotlibrc
+        """
+        update_custom_rc(rcfp)
+
+
+    def cli():
+        fire.Fire({
+            'init': init,
+            'install': install,
+            'updaterc': updaterc,
+            'list': list_font})
+
+
+可以看到 ``cli`` 函数其实是实例化一个 ``fire.Fire`` 对象， `fire <https://github.com/google/python-fire>`_ 是一个由 Google 团队开发的可以很方便构建命令行功能的包，fire 可以构建复杂的多级命令行结构，具体的使用方法可以参考其文档。本例为命令入口添加了 4 个子命令，当一切安装妥当以后，可以通过执行 ``mplfonts -h`` 来查看命令行的说明文档：
+
+.. code:: bash
+
+    NAME
+    mplfonts
+
+    SYNOPSIS
+        mplfonts COMMAND
+
+    COMMANDS
+        COMMAND is one of the following:
+
+        init
+        To set default cjk fonts and put into use
+
+        install
+        To install font
+
+        updaterc
+        To update matplotlibrc by custom file
+
+        list
+        To list font names for choosing
+
+也可以通过在子命令中查看 help: ``mplfonts init -h`` ，这些说明都是在每个子命令所定义的函数的 Docstring 中编写的。
+
+.. code:: bash
+
+    NAME
+    mplfonts init - To set default cjk fonts and put into use
+
+    SYNOPSIS
+        mplfonts init -
+
+    DESCRIPTION
+        To set default cjk fonts and put into use
+
+当然如果 fire 并非唯一的选择，比如另一个比较流行的用于封装 Python 命令行的包 `click <https://github.com/pallets/click/>`_ ，这个可以自己去探索如何使用，这里就不给出示例了。
