@@ -34,7 +34,7 @@ Python 包的分发更常见的应该是通过包管理器进行分发，这样�
 
 .. code:: bash
 
-    twine upload --repository-url https://test.pypi.org dist/*
+    twine upload --repository-url https://test.pypi.org/legacy/ dist/*
 
 
 上述命令执行以后会提示你输入在 test.pypi.org 网站上的账号密码。如果一切顺利，我们就可以在 `test.pypi.org <https://test.pypi.org/>`_ 网站上搜索到我们上传的包了。
